@@ -213,6 +213,8 @@ def main():
     removedOutlierCorners=list() 
     while True:
         try:
+            # set camera intrinsics here:
+            
             #compute initial guesses for the baselines, intrinsics
             print("initializing initial guesses")
             if len(cameraList)>1:
