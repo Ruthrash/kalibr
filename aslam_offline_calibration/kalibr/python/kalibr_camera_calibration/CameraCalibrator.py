@@ -41,7 +41,7 @@ class CameraGeometry(object):
         
         #create the design variables
         self.dv = cameraModel.designVariable(self.geometry)
-        self.setDvActiveStatus(True, True, False)
+        self.setDvActiveStatus(False, False, False)
         self.isGeometryInitialized = False
 
         #create target detector
@@ -51,6 +51,21 @@ class CameraGeometry(object):
         self.dv.projectionDesignVariable().setActive(projectionActive)
         self.dv.distortionDesignVariable().setActive(distortionActive)
         self.dv.shutterDesignVariable().setActive(shutterActice)
+
+    def initGeometryFromYaml(self,intrinsics_dict_from_yaml:dict):
+        camera_projection_params = np.zeros((4,1))
+        distortion_params = np.zeros((5,1))
+        camera_projection_params[0,0] = intrinsics_dict_from_yaml['fx']
+        camera_projection_params[1,0] = intrinsics_dict_from_yaml['fy']
+        camera_projection_params[2,0] = intrinsics_dict_from_yaml['cx']
+        camera_projection_params[3,0] = intrinsics_dict_from_yaml['cy']
+        distortion_params[0,0] = intrinsics_dict_from_yaml['d1']
+        distortion_params[1,0] = intrinsics_dict_from_yaml['d2']
+        distortion_params[2,0] = intrinsics_dict_from_yaml['d3']
+        distortion_params[3,0] = intrinsics_dict_from_yaml['d4']
+        distortion_params[4,0] = intrinsics_dict_from_yaml['d5']
+        self.geometry.projection().setParameters(camera_projection_params)
+        self.geometry.projection().distortion().setParameters(distortion_params)
 
     def initGeometryFromObservations(self, observations):
         #obtain focal length guess
@@ -176,10 +191,13 @@ class CalibrationTargetOptimizationProblem(ic.CalibrationOptimizationProblem):
         for camera in cameras:
             if not camera.isGeometryInitialized:
                 raise RuntimeError('The camera geometry is not initialized. Please initialize with initGeometry() or initGeometryFromDataset()')
-            camera.setDvActiveStatus(True, True, False)
-            rval.addDesignVariable(camera.dv.distortionDesignVariable(), CALIBRATION_GROUP_ID)
-            rval.addDesignVariable(camera.dv.projectionDesignVariable(), CALIBRATION_GROUP_ID)
-            rval.addDesignVariable(camera.dv.shutterDesignVariable(), CALIBRATION_GROUP_ID)
+
+            # camera.setDvActiveStatus(True, True, False)
+            camera.setDvActiveStatus(False, False, False)
+
+            # rval.addDesignVariable(camera.dv.distortionDesignVariable(), CALIBRATION_GROUP_ID)
+            # rval.addDesignVariable(camera.dv.projectionDesignVariable(), CALIBRATION_GROUP_ID)
+            # rval.addDesignVariable(camera.dv.shutterDesignVariable(), CALIBRATION_GROUP_ID)
         
         #4.add all observations for this view
         cams_in_view = set()

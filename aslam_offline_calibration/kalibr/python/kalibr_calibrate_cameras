@@ -79,7 +79,9 @@ def parseArgs():
         tagSpacing: 0.3 #percent of tagSize"""
             
     parser = KalibrArgParser(description='Calibrate the intrinsics and extrinsics of a camera system with non-shared overlapping field of view.', usage=usage)
-    parser.add_argument('--models', nargs='+', dest='models', help='The camera model {0} to estimate'.format(list(cameraModels.keys())), required=True)
+    parser.add_argument('--models', nargs='+', dest='models', help='The camera model {0} to estimatessss'.format(list(cameraModels.keys())), required=True)
+    parser.add_argument('--given_intrinsics', nargs='+', dest='intrinsics', help='pre estimated intrinsics, intrinsics estimation is skipped if this is provided', required=False)
+
     
     groupSource = parser.add_argument_group('Data source')
     groupSource.add_argument('--bag', dest='bagfile', help='The bag file with the data')
@@ -127,7 +129,7 @@ def parseArgs():
     if len(parsed.topics) != len(parsed.models):
         sm.logError("Please specify exactly one camera model (--models) for each topic (--topics).")
         sys.exit(2)
-        
+    print(parsed.models, parsed.intrinsics)
     if parsed.minViewOutlier<1:
         sm.logError("Please specify a positive integer (--min-views-outlier).")
         sys.exit(2)
@@ -153,7 +155,13 @@ def main():
     signal.signal(signal.SIGINT, signal_exit)
 
     targetConfig = kc.CalibrationTargetParameters(parsed.targetYaml)
+    camera_intrinsics_objects = []
+    if(len(parsed.intrinsics  )!= 0):
+        for intrinsics_file in parsed.intrinsics: 
+            camera_intrinsics_objects.append(kc.PreEstimatedCameraIntrinsics(intrinsics_file))
 
+    print(camera_intrinsics_objects[0].getYamlDict())
+    print(camera_intrinsics_objects[1].getYamlDict())
     #create camera objects, initialize the intrinsics and extract targets
     cameraList = list()
     numCams = len(parsed.topics)
@@ -185,8 +193,11 @@ def main():
                 obsdb.addObservation(cam_id, obs)
 
             #initialize the intrinsics
-            if not cam.initGeometryFromObservations(observations):
+            if len(camera_intrinsics_objects)==0 and not cam.initGeometryFromObservations(observations):
                 raise RuntimeError("Could not initialize the intrinsics for camera with topic: {0}. Try to use --verbose and check whether the calibration target extraction is successful.".format(topic))
+            if len(camera_intrinsics_objects)!= 0: 
+                cam.initGeometryFromYaml(camera_intrinsics_objects[cam_id].getYamlDict())
+                print("Using cam{0}: intrinsics from "+parsed.intrinsics[cam_id].format(cam_id))
             
             print("\tProjection initialized to: %s" % cam.geometry.projection().getParameters().flatten())
             print("\tDistortion initialized to: %s" % cam.geometry.projection().distortion().getParameters().flatten())
@@ -215,6 +226,9 @@ def main():
         try:
             #compute initial guesses for the baselines, intrinsics
             print("initializing initial guesses")
+            for cam_idx, cam in enumerate(cameraList):
+                cam.initGeometryFromYaml(camera_intrinsics_objects[cam_idx].getYamlDict())     
+                       
             if len(cameraList)>1:
                 baseline_guesses = graph.getInitialGuesses(cameraList)
             else:
@@ -226,8 +240,11 @@ def main():
             for baseline_idx, baseline in enumerate(baseline_guesses):
                 print("initialized baseline between cam{0} and cam{1} to:".format(baseline_idx, baseline_idx+1))
                 print(baseline.T())
-                
+
+            # cam.initGeometryFromYaml(camera_intrinsics_objects[cam_idx].getYamlDict())
+
             for cam_idx, cam in enumerate(cameraList):
+                # cam.initGeometryFromYaml(camera_intrinsics_objects[cam_idx].getYamlDict())
                 print("initialized cam{0} to:".format(cam_idx))
                 print("\t projection cam{0}: {1}".format(cam_idx, cam.geometry.projection().getParameters().flatten()))
                 print("\t distortion cam{0}: {1}".format(cam_idx, cam.geometry.projection().distortion().getParameters().flatten()))

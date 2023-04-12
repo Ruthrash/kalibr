@@ -528,6 +528,12 @@ class ImuSetParameters(ParametersBase):
         self.data[name] = imu_parameters.getYamlDict()
 
 
+class PreEstimatedCameraIntrinsics(ParametersBase):
+    def __init__(self, yamlFile, createYaml=False):
+        ParametersBase.__init__(self, yamlFile, "Camer Intrinsics", createYaml)
+        
+
+
 class CalibrationTargetParameters(ParametersBase):
     def __init__(self, yamlFile, createYaml=False):
         ParametersBase.__init__(self, yamlFile, "CalibrationTargetConfig", createYaml)
